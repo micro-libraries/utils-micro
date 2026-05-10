@@ -1,0 +1,13 @@
+os:
+  Linux:
+  Android:
+    api_level: [ANY]
+  Windows:
+    subsystem: [null, cygwin, msys, msys2, wsl]
+arch: ["x86", "x86_64", "armv8"]
+compiler:
+  gcc:
+    libcxx: [libstdc++, libstdc++11]
+    cppstd: [98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+    version: ["15"]
+build_type: [Debug, Release, RelWithDebInfo, MinSizeRel]

@@ -1,0 +1,26 @@
+variables:
+  DOCKER_BUILDKIT: 1
+  DOCKERFILE_LOCATION: docker/ubuntu.Dockerfile
+  IMAGE: ${CI_REGISTRY_IMAGE}/ubuntu-python3.10
+  TAG: ${CI_COMMIT_REF_SLUG}
+  CONAN_USERNAME: micro-libraries
+  CONAN_CHANNEL: default
+  CONAN_EXTRA_OPTIONS_DEV: ""
+  CONAN_EXTRA_OPTIONS: ""
+
+default:
+  image: ${IMAGE}:${TAG}
+  interruptible: true
+  timeout: 10m
+
+build-image:
+  script:
+  - DOCKER_BUILDKIT=${DOCKER_BUILDKIT} docker build -f ${DOCKERFILE_LOCATION} . -t ${IMAGE}:${TAG}
+
+conan:check-dev:
+  script:
+  - conan create conan/conanfile-dev.py ${CONAN_EXTRA_OPTIONS_DEV}
+
+conan:check:
+  script:
+    - conan create conan/conanfile.py ${CONAN_EXTRA_OPTIONS}
