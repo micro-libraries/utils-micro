@@ -14,7 +14,7 @@ default:
   timeout: 10m
 
 .code-block-conan-build-init:
-- git remote set-url origin ssh://git@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+- git remote set-url origin https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
 - conan config install conan/config
 - NAME=$(conan inspect ${CONANFILE} --format json | jq -r '.name')
 - VERSION=$(conan inspect ${CONANFILE} --format json | jq -r '.version')
