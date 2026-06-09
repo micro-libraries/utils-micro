@@ -26,6 +26,7 @@ RUN apt-get update && \
         libc++abi-${CLANG_VERSION}-dev \
         git \
         git-lfs \
+        jq \
         openssh-client \
         curl \
         python${PYTHON_VERSION} \
