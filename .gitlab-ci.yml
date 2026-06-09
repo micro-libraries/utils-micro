@@ -48,8 +48,8 @@ conan:check-dev:
   variables:
     CONANFILE: conan/conanfile-dev.py
   script:
-  - !reference [.code-block-conan-build-init]
   - conan export conan/base-cmake-library/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+  - !reference [.code-block-conan-build-init]
   - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS_DEV}
 
 conan:check:
@@ -57,8 +57,8 @@ conan:check:
   variables:
     CONANFILE: conan/conanfile.py
   script:
-  - !reference [.code-block-conan-build-init]
   - conan export conan/base-cmake-library/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+  - !reference [.code-block-conan-build-init]
   - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
 
 conan:deploy-base:
