@@ -50,6 +50,7 @@ jobs:
           echo "PKG_NAME=$(conan inspect conan/conanfile-dev.py --format json | jq -r '.name')" >> $GITHUB_ENV
           echo "PKG_VERSION=$(conan inspect conan/conanfile-dev.py --format json | jq -r '.version')" >> $GITHUB_ENV
       - run: conan remove "${{ env.PKG_NAME }}/${{ env.PKG_VERSION }}@${{ env.CONAN_USERNAME }}/${{ env.CONAN_CHANNEL }}" -c || true
+      - run: conan export conan/base-cmake-library/conanfile.py --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }}
       - run: conan create conan/conanfile-dev.py --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS_DEV }}
 
   conan-check:
@@ -69,4 +70,5 @@ jobs:
           echo "PKG_NAME=$(conan inspect conan/conanfile.py --format json | jq -r '.name')" >> $GITHUB_ENV
           echo "PKG_VERSION=$(conan inspect conan/conanfile.py --format json | jq -r '.version')" >> $GITHUB_ENV
       - run: conan remove "${{ env.PKG_NAME }}/${{ env.PKG_VERSION }}@${{ env.CONAN_USERNAME }}/${{ env.CONAN_CHANNEL }}" -c || true
+      - run: conan export conan/base-cmake-library/conanfile.py --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }}
       - run: conan create conan/conanfile.py --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS }}

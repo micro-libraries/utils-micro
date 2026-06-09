@@ -35,13 +35,22 @@ build-image:
       -f ${DOCKERFILE_LOCATION} . -t ${IMAGE}:${TAG}
   - docker push ${IMAGE}:${TAG}
 
+conan:check-base:
+  needs: [build-image]
+  variables:
+    CONANFILE: conan/base-cmake-library/conanfile.py
+  script:
+  - !reference [.code-block-conan-build-init]
+  - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+
 conan:check-dev:
   needs: [build-image]
   variables:
     CONANFILE: conan/conanfile-dev.py
   script:
   - !reference [.code-block-conan-build-init]
-  - conan create conan/conanfile-dev.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS_DEV}
+  - conan export conan/base-cmake-library/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+  - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS_DEV}
 
 conan:check:
   needs: [build-image]
@@ -49,4 +58,17 @@ conan:check:
     CONANFILE: conan/conanfile.py
   script:
   - !reference [.code-block-conan-build-init]
-  - conan create conan/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
+  - conan export conan/base-cmake-library/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+  - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
+
+conan:deploy-base:
+  needs: [conan:check-base]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    CONANFILE: conan/base-cmake-library/conanfile.py
+  script:
+    - !reference [.code-block-conan-build-init]
+    - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+    - conan remote login gitlab ci_user -p ${CI_JOB_TOKEN}
+    - conan upload "${NAME}/${VERSION}@${CONAN_USERNAME}/${CONAN_CHANNEL}" -r gitlab

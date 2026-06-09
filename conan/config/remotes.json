@@ -4,6 +4,11 @@
       "name": "conancenter",
       "url": "https://center2.conan.io",
       "verify_ssl": true
+    },
+    {
+      "name": "gitlab",
+      "url": "https://gitlab.com/api/v4/groups/micro-libraries/-/packages/conan",
+      "verify_ssl": true
     }
   ]
 }
