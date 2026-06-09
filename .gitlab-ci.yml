@@ -41,7 +41,7 @@ conan:check-base:
     CONANFILE: conan/base-cmake-library/conanfile.py
   script:
   - !reference [.code-block-conan-build-init]
-  - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+  - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
 
 conan:check-dev:
   needs: [build-image]
@@ -50,7 +50,7 @@ conan:check-dev:
   script:
   - conan export conan/base-cmake-library/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
   - !reference [.code-block-conan-build-init]
-  - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS_DEV}
+  - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS_DEV}
 
 conan:check:
   needs: [build-image]
@@ -59,7 +59,7 @@ conan:check:
   script:
   - conan export conan/base-cmake-library/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
   - !reference [.code-block-conan-build-init]
-  - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
+  - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
 
 conan:deploy-base:
   needs: [conan:check-base]
@@ -69,6 +69,6 @@ conan:deploy-base:
     CONANFILE: conan/base-cmake-library/conanfile.py
   script:
     - !reference [.code-block-conan-build-init]
-    - conan create ${CONANFILE} --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+    - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
     - conan remote login gitlab ci_user -p ${CI_JOB_TOKEN}
     - conan upload "${NAME}/${VERSION}@${CONAN_USERNAME}/${CONAN_CHANNEL}" -r gitlab
