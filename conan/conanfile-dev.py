@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from conan import ConanFile
 from conan.tools.files import copy
 
@@ -28,7 +30,7 @@ class ConanPackage(ConanFile):
         pass
 
     def package(self):
-        copy(self, "*", self.source_folder / "include" / "dev", self.package_folder / "include")
+        copy(self, "*", Path(self.source_folder) / "include" / "dev", Path(self.package_folder) / "include")
 
     def package_info(self):
         self.cpp_info.bindirs = []
