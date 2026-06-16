@@ -59,6 +59,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: conan config install conan/config
       - run: conan export conan/base-cmake-library/conanfile.py
 
@@ -73,6 +74,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: conan export conan/base-cmake-library/conanfile.py
       - run: conan config install conan/config
       - name: Get package info
@@ -93,6 +95,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: conan export conan/base-cmake-library/conanfile.py
       - run: conan config install conan/config
       - name: Get package info
