@@ -1,7 +1,15 @@
+workflow:
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  - if: $CI_COMMIT_BRANCH == "develop"
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  - when: never
+
 variables:
   DOCKERFILE_LOCATION: docker/ubuntu.Dockerfile
   IMAGE: ${CI_REGISTRY_IMAGE}/ubuntu
   TAG: ${CI_COMMIT_REF_SLUG}
+  CONAN_REMOTE: gitlab
   CONAN_USERNAME: micro-libraries
   CONAN_CHANNEL: default
   CONAN_EXTRA_OPTIONS_DEV: ""
@@ -13,17 +21,61 @@ default:
   interruptible: true
   timeout: 10m
 
-.code-block-conan-build-init:
+.code-block-conan-init:
 - git remote set-url origin https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
 - conan config install conan/config
 - NAME=$(conan inspect ${CONANFILE} --format json | jq -r '.name')
 - VERSION=$(conan inspect ${CONANFILE} --format json | jq -r '.version')
 - conan remove "${NAME}/${VERSION}@${CONAN_USERNAME}/${CONAN_CHANNEL}" -c || true
 
+.code-block-conan-upload:
+- |
+  if ([ "${CI_COMMIT_BRANCH}" = "${CI_DEFAULT_BRANCH}" ] || [ "${CI_COMMIT_BRANCH}" = "develop" ]) && ! grep -qF "[Unreleased]" CHANGELOG.md; then
+    conan remote login ${CONAN_REMOTE} ci_user -p ${CI_JOB_TOKEN}
+    conan upload "${NAME}/${VERSION}@${CONAN_USERNAME}/${CONAN_CHANNEL}" -r ${CONAN_REMOTE} --force
+  fi
+
+.conan-needs:
+  needs:
+  - build-image
+  - job: check-release-tag
+    optional: true
+  - job: check-version-in-changelog
+    optional: true
+
+.conan-channel:
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    variables:
+      CONAN_CHANNEL: stable
+  - if: $CI_COMMIT_BRANCH == "develop"
+    variables:
+      CONAN_CHANNEL: nightly
+  - when: on_success
+
+check-release-tag:
+  image: alpine/git
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+  - VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
+  - test -z "$(git ls-remote --tags origin | grep v${VERSION})"
+
+check-version-in-changelog:
+  image: alpine/git
+  script:
+  - VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
+  - |
+    if [ "${CI_COMMIT_BRANCH}" = "${CI_DEFAULT_BRANCH}" ]; then
+      grep -qE "^## \[${VERSION}\]" CHANGELOG.md
+    else
+      grep -qE "^## \[Unreleased\]|^## \[${VERSION}\]" CHANGELOG.md
+    fi
+
 build-image:
   image: docker:latest
   services:
-    - docker:dind
+  - docker:dind
   variables:
     DOCKER_TLS_CERTDIR: /certs
   script:
@@ -35,40 +87,45 @@ build-image:
       -f ${DOCKERFILE_LOCATION} . -t ${IMAGE}:${TAG}
   - docker push ${IMAGE}:${TAG}
 
-conan:check-base:
-  needs: [build-image]
-  variables:
-    CONANFILE: conan/base-cmake-library/conanfile.py
+conan:base:
+  extends: .conan-needs
   script:
-  - !reference [.code-block-conan-build-init]
-  - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
+  - conan config install conan/config
+  - conan export conan/base-cmake-library/conanfile.py
+  - |
+    if [ "${CI_COMMIT_BRANCH}" = "${CI_DEFAULT_BRANCH}" ]; then
+      conan remote login ${CONAN_REMOTE} ci_user -p ${CI_JOB_TOKEN}
+      conan upload "base-cmake-library/1.0" -r ${CONAN_REMOTE} --force
+    fi
 
-conan:check-dev:
-  needs: [build-image]
+conan:dev:
+  extends: [.conan-channel, .conan-needs]
   variables:
     CONANFILE: conan/conanfile-dev.py
   script:
-  - conan export conan/base-cmake-library/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
-  - !reference [.code-block-conan-build-init]
+  - conan export conan/base-cmake-library/conanfile.py
+  - !reference [.code-block-conan-init]
   - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS_DEV}
+  - !reference [.code-block-conan-upload]
 
-conan:check:
-  needs: [build-image]
+conan:lib:
+  extends: [.conan-channel, .conan-needs]
   variables:
     CONANFILE: conan/conanfile.py
   script:
-  - conan export conan/base-cmake-library/conanfile.py --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
-  - !reference [.code-block-conan-build-init]
+  - conan export conan/base-cmake-library/conanfile.py
+  - !reference [.code-block-conan-init]
   - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
+  - !reference [.code-block-conan-upload]
 
-conan:deploy-base:
-  needs: [conan:check-base]
+add-release-tag:
+  image: alpine/git
+  needs: [conan:base, conan:dev, conan:lib]
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  variables:
-    CONANFILE: conan/base-cmake-library/conanfile.py
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
-    - !reference [.code-block-conan-build-init]
-    - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL}
-    - conan remote login gitlab ci_user -p ${CI_JOB_TOKEN}
-    - conan upload "${NAME}/${VERSION}@${CONAN_USERNAME}/${CONAN_CHANNEL}" -r gitlab
+  - VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
+  - git tag "v${VERSION}" || true
+  - git tag -d v || true
+  - git remote set-url origin ${CI_SERVER_PROTOCOL}://oauth2:${GIT_PA_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+  - git push --tags

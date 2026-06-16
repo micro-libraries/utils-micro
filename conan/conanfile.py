@@ -9,7 +9,7 @@ class ConanPackage(ConanFile):
     description = "Various helpful utilities - runtime library. From a collection of low-overhead libraries."
     settings = "os", "arch", "compiler", "build_type"
     package_type = "library"
-    python_requires = "base-cmake-library/1.0@micro-libraries/default"
+    python_requires = "base-cmake-library/1.0"
     python_requires_extend = "base-cmake-library.BaseCmakeLibrary"
 
     options = {
