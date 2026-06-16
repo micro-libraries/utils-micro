@@ -11,13 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Changelog.
 - GitHub CI.
+- Extended CI to validate proper versioning, including changelog entry and release tags.
+- Deployment to `gitlab` remote.
 
 ### Fixed
 
 - Building packages with Conan in GitLab CI.
 - GitLab CI now properly uses hosted Docker-in-Docker runners.
 
-## [0.1.0] - 07-06-2026
+## [0.1.0] - 2026-06-07
 
 ### Added
 

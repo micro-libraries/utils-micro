@@ -1,31 +1,46 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
 
 env:
   DOCKERFILE_LOCATION: docker/ubuntu.Dockerfile
   IMAGE: ghcr.io/${{ github.repository }}/ubuntu
-  TAG: ${{ github.ref_name }}
+  TAG: ${{ github.head_ref || github.ref_name }}
   CONAN_USERNAME: micro-libraries
   CONAN_CHANNEL: default
   CONAN_EXTRA_OPTIONS_DEV: ""
   CONAN_EXTRA_OPTIONS: ""
 
 jobs:
+  check-version-in-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "${{ github.event.repository.default_branch }}" ]; then
+            grep -qE "^## \[${VERSION}\]" CHANGELOG.md
+          else
+            grep -qE "^## \[Unreleased\]|^## \[${VERSION}\]" CHANGELOG.md
+          fi
+
   build-image:
     runs-on: ubuntu-latest
     permissions:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push
-        run: |
+      - run: |
           docker build \
             --cache-from ${{ env.IMAGE }}:${{ env.TAG }} \
             --cache-from ${{ env.IMAGE }}:${{ github.event.repository.default_branch }} \
@@ -33,42 +48,56 @@ jobs:
             -f ${{ env.DOCKERFILE_LOCATION }} . -t ${{ env.IMAGE }}:${{ env.TAG }}
           docker push ${{ env.IMAGE }}:${{ env.TAG }}
 
-  conan-check-dev:
-    needs: build-image
+  conan-base:
+    needs: [build-image, check-version-in-changelog]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}/ubuntu:${{ github.ref_name }}
+      image: ghcr.io/${{ github.repository }}/ubuntu:${{ github.head_ref || github.ref_name }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - run: conan config install conan/config
+      - run: conan export conan/base-cmake-library/conanfile.py
+
+  conan-dev:
+    needs: [build-image, check-version-in-changelog]
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository }}/ubuntu:${{ github.head_ref || github.ref_name }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: conan export conan/base-cmake-library/conanfile.py
       - run: conan config install conan/config
       - name: Get package info
         run: |
           echo "PKG_NAME=$(conan inspect conan/conanfile-dev.py --format json | jq -r '.name')" >> $GITHUB_ENV
           echo "PKG_VERSION=$(conan inspect conan/conanfile-dev.py --format json | jq -r '.version')" >> $GITHUB_ENV
-      - run: conan remove "${{ env.PKG_NAME }}/${{ env.PKG_VERSION }}@${{ env.CONAN_USERNAME }}/${{ env.CONAN_CHANNEL }}" -c || true
-      - run: conan export conan/base-cmake-library/conanfile.py --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }}
-      - run: conan create conan/conanfile-dev.py --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS_DEV }}
+      - run: conan remove "$PKG_NAME/$PKG_VERSION@${{ env.CONAN_USERNAME }}/${{ env.CONAN_CHANNEL }}" -c || true
+      - run: conan create conan/conanfile-dev.py -b missing --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS_DEV }}
 
-  conan-check:
-    needs: build-image
+  conan-lib:
+    needs: [build-image, check-version-in-changelog]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}/ubuntu:${{ github.ref_name }}
+      image: ghcr.io/${{ github.repository }}/ubuntu:${{ github.head_ref || github.ref_name }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - run: conan export conan/base-cmake-library/conanfile.py
       - run: conan config install conan/config
       - name: Get package info
         run: |
           echo "PKG_NAME=$(conan inspect conan/conanfile.py --format json | jq -r '.name')" >> $GITHUB_ENV
           echo "PKG_VERSION=$(conan inspect conan/conanfile.py --format json | jq -r '.version')" >> $GITHUB_ENV
-      - run: conan remove "${{ env.PKG_NAME }}/${{ env.PKG_VERSION }}@${{ env.CONAN_USERNAME }}/${{ env.CONAN_CHANNEL }}" -c || true
-      - run: conan export conan/base-cmake-library/conanfile.py --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }}
-      - run: conan create conan/conanfile.py --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS }}
+      - run: conan remove "$PKG_NAME/$PKG_VERSION@${{ env.CONAN_USERNAME }}/${{ env.CONAN_CHANNEL }}" -c || true
+      - run: conan create conan/conanfile.py -b missing --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS }}

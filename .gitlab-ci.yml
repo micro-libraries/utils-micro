@@ -54,7 +54,9 @@ default:
   - when: on_success
 
 check-release-tag:
-  image: alpine/git
+  image:
+    name: alpine/git
+    entrypoint: [""]
   rules:
   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
@@ -62,7 +64,9 @@ check-release-tag:
   - test -z "$(git ls-remote --tags origin | grep v${VERSION})"
 
 check-version-in-changelog:
-  image: alpine/git
+  image:
+    name: alpine/git
+    entrypoint: [""]
   script:
   - VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
   - |
@@ -119,7 +123,9 @@ conan:lib:
   - !reference [.code-block-conan-upload]
 
 add-release-tag:
-  image: alpine/git
+  image:
+    name: alpine/git
+    entrypoint: [""]
   needs: [conan:base, conan:dev, conan:lib]
   rules:
   - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
