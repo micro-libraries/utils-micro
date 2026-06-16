@@ -31,7 +31,7 @@ default:
 .code-block-conan-upload:
 - |
   if ([ "${CI_COMMIT_BRANCH}" = "${CI_DEFAULT_BRANCH}" ] || [ "${CI_COMMIT_BRANCH}" = "develop" ]) && ! grep -qF "[Unreleased]" CHANGELOG.md; then
-    conan remote login ${CONAN_REMOTE} ci_user -p ${CI_JOB_TOKEN}
+    conan remote login ${CONAN_REMOTE} ci_user -p ${MICRO_LIBRARIES_CONAN_TOKEN}
     conan upload "${NAME}/${VERSION}@${CONAN_USERNAME}/${CONAN_CHANNEL}" -r ${CONAN_REMOTE} --force
   fi
 
@@ -98,7 +98,7 @@ conan:base:
   - conan export conan/base-cmake-library/conanfile.py
   - |
     if [ "${CI_COMMIT_BRANCH}" = "${CI_DEFAULT_BRANCH}" ]; then
-      conan remote login ${CONAN_REMOTE} ci_user -p ${CI_JOB_TOKEN}
+      conan remote login ${CONAN_REMOTE} ci_user -p ${MICRO_LIBRARIES_CONAN_TOKEN}
       conan upload "base-cmake-library/1.0" -r ${CONAN_REMOTE} --force
     fi
 
