@@ -1,4 +1,22 @@
+build
+*.log
+
+# CLion
+.idea
+cmake-build-*
+
+# Visual Studio Code
+.vscode
 *.code-workspace
-.idea/
-cmake-build-*/
-build/
+
+# Compiled Python modules
+*.pyc
+__pycache__
+# Python tests cache
+.pytest_cache
+# Generated Python stubs
+*.pyi
+# Setuptools distribution folder
+dist
+# Python egg metadata, regenerated from source files by setuptools
+*.egg-info

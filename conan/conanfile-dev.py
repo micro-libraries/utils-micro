@@ -31,10 +31,12 @@ class ConanPackage(ConanFile):
 
     def package(self):
         copy(self, "*", Path(self.source_folder) / "include" / "dev", Path(self.package_folder) / "include")
+        copy(self, "*", Path(self.source_folder) / "cmake", Path(self.package_folder) / "cmake")
 
     def package_info(self):
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
+        self.cpp_info.builddirs = ["cmake"]
         self.cpp_info.set_property("cmake_target_name", "utils-micro::utils-micro-dev")
         self.cpp_info.set_property("cmake_file_name", "utils-micro-dev")
 
