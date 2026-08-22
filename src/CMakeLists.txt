@@ -1,18 +1,18 @@
+cmake_policy(SET CMP0069 NEW)
+include(CheckIPOSupported)
+check_ipo_supported(RESULT INTERPROCEDURAL_OPTIMIZATION OUTPUT IPO_OUTPUT)
+if(NOT ${INTERPROCEDURAL_OPTIMIZATION})
+    message(STATUS "IPO not supported: ${IPO_OUTPUT}")
+endif()
 
-add_library(utils-micro SHARED utils-micro.cpp)
-target_sources(utils-micro PUBLIC
-    FILE_SET HEADERS
-    BASE_DIRS ../include
-    FILES ${CMAKE_CURRENT_SOURCE_DIR}/../include/utils-micro.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/../include/utils-micro-config.h
+include("${CMAKE_SOURCE_DIR}/cmake/simd-flags.cmake")
+include("${CMAKE_SOURCE_DIR}/cmake/release-debug-flags.cmake")
+
+# Create target "utils-micro".
+add_binary_wrapper_micro_library("${PROJECT_NAME}"
+        CONFIGURATION default
+        HEADER "${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}.h"
+        SOURCES "${PROJECT_NAME}.cpp"
+        DEPENDENCIES "${PROJECT_NAME}-dev"
 )
-target_include_directories(utils-micro PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include/dev>
-    $<INSTALL_INTERFACE:include>
-)
-target_include_directories(utils-micro PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
-    $<INSTALL_INTERFACE:include>
-)
-target_link_libraries(utils-micro PRIVATE utils-micro-dev)
-add_library(utils-micro::utils-micro ALIAS utils-micro)
+set_property(TARGET utils-micro PROPERTY INTERPROCEDURAL_OPTIMIZATION ${INTERPROCEDURAL_OPTIMIZATION})

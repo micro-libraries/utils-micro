@@ -1,0 +1,14 @@
+.build-image:
+  image: docker:latest
+  services:
+  - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: /certs
+  script:
+  - echo -n ${CI_JOB_TOKEN} | docker login -u gitlab-ci-token --password-stdin ${CI_REGISTRY}
+  - docker build
+      --cache-from ${IMAGE}:${TAG}
+      --cache-from ${IMAGE}:${CI_DEFAULT_BRANCH}
+      --build-arg BUILDKIT_INLINE_CACHE=1
+      -f ${DOCKERFILE_LOCATION} . -t ${IMAGE}:${TAG}
+  - docker push ${IMAGE}:${TAG}

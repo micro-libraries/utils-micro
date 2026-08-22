@@ -1,0 +1,35 @@
+.check-release-tag:
+  image:
+    name: alpine/git
+    entrypoint: [""]
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+  - VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
+  - test -z "$(git ls-remote --tags origin | grep "refs/tags/v${VERSION}$")"
+
+.check-version-in-changelog:
+  image:
+    name: alpine/git
+    entrypoint: [""]
+  script:
+  - VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
+  - |
+    if [ "${CI_COMMIT_BRANCH}" = "${CI_DEFAULT_BRANCH}" ]; then
+      grep -qE "^## \[${VERSION}\]" CHANGELOG.md
+    else
+      grep -qE "^## \[Unreleased\]|^## \[${VERSION}\]" CHANGELOG.md
+    fi
+
+.add-release-tag:
+  image:
+    name: alpine/git
+    entrypoint: [""]
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+  - VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
+  - git tag "v${VERSION}" || true
+  - git tag -d v || true
+  - git remote set-url origin ${CI_SERVER_PROTOCOL}://oauth2:${GIT_PA_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+  - git push --tags

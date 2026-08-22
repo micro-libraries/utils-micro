@@ -10,13 +10,34 @@ on:
 env:
   DOCKERFILE_LOCATION: docker/ubuntu.Dockerfile
   IMAGE: ghcr.io/${{ github.repository }}/ubuntu
-  TAG: ${{ github.head_ref || github.ref_name }}
   CONAN_USERNAME: micro-libraries
-  CONAN_CHANNEL: default
   CONAN_EXTRA_OPTIONS_DEV: ""
   CONAN_EXTRA_OPTIONS: ""
 
 jobs:
+  compute-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.slug.outputs.tag }}
+      conan-channel: ${{ steps.channel.outputs.channel }}
+    steps:
+      - id: slug
+        run: |
+          RAW="${{ github.head_ref || github.ref_name }}"
+          SLUG=$(printf '%s' "$RAW" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' | cut -c1-63)
+          echo "tag=$SLUG" >> "$GITHUB_OUTPUT"
+      - id: channel
+        run: |
+          # Mirrors .gitlab/conan.yml's .conan-channel rules.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "${{ github.event.repository.default_branch }}" ]; then
+            CHANNEL=stable
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "develop" ]; then
+            CHANNEL=nightly
+          else
+            CHANNEL=default
+          fi
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+
   check-version-in-changelog:
     runs-on: ubuntu-latest
     steps:
@@ -29,10 +50,24 @@ jobs:
             grep -qE "^## \[Unreleased\]|^## \[${VERSION}\]" CHANGELOG.md
           fi
 
+  check-release-tag:
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+      - run: |
+          VERSION=$(sed -n 's/.*VERSION \([^ ]*\) LANGUAGES.*/\1/p' CMakeLists.txt)
+          test -z "$(git ls-remote --tags origin | grep "refs/tags/v${VERSION}$")"
+
   build-image:
+    needs: [compute-tag]
     runs-on: ubuntu-latest
     permissions:
       packages: write
+    env:
+      TAG: ${{ needs.compute-tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/login-action@v3
@@ -49,10 +84,10 @@ jobs:
           docker push ${{ env.IMAGE }}:${{ env.TAG }}
 
   conan-base:
-    needs: [build-image, check-version-in-changelog]
+    needs: [compute-tag, build-image, check-version-in-changelog]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}/ubuntu:${{ github.head_ref || github.ref_name }}
+      image: ghcr.io/${{ github.repository }}/ubuntu:${{ needs.compute-tag.outputs.tag }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -64,19 +99,21 @@ jobs:
       - run: conan export conan/base-cmake-library/conanfile.py
 
   conan-dev:
-    needs: [build-image, check-version-in-changelog]
+    needs: [compute-tag, build-image, check-version-in-changelog]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}/ubuntu:${{ github.head_ref || github.ref_name }}
+      image: ghcr.io/${{ github.repository }}/ubuntu:${{ needs.compute-tag.outputs.tag }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      CONAN_CHANNEL: ${{ needs.compute-tag.outputs.conan-channel }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: conan export conan/base-cmake-library/conanfile.py
       - run: conan config install conan/config
+      - run: conan export conan/base-cmake-library/conanfile.py
       - name: Get package info
         run: |
           echo "PKG_NAME=$(conan inspect conan/conanfile-dev.py --format json | jq -r '.name')" >> $GITHUB_ENV
@@ -85,19 +122,21 @@ jobs:
       - run: conan create conan/conanfile-dev.py -b missing --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS_DEV }}
 
   conan-lib:
-    needs: [build-image, check-version-in-changelog]
+    needs: [compute-tag, build-image, check-version-in-changelog]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}/ubuntu:${{ github.head_ref || github.ref_name }}
+      image: ghcr.io/${{ github.repository }}/ubuntu:${{ needs.compute-tag.outputs.tag }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      CONAN_CHANNEL: ${{ needs.compute-tag.outputs.conan-channel }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - run: conan export conan/base-cmake-library/conanfile.py
       - run: conan config install conan/config
+      - run: conan export conan/base-cmake-library/conanfile.py
       - name: Get package info
         run: |
           echo "PKG_NAME=$(conan inspect conan/conanfile.py --format json | jq -r '.name')" >> $GITHUB_ENV

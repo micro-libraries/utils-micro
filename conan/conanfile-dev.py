@@ -8,7 +8,7 @@ class ConanPackage(ConanFile):
     """Various helpful utilities - header-only source. From a collection of low-overhead libraries."""
     name = "utils-micro-dev"
     license = "MPL"
-    homepage = "TODO"
+    homepage = "https://gitgud.io/micro-libraries/utils-micro"
     description = "Various helpful utilities - header-only source. From a collection of low-overhead libraries."
     settings = "os", "arch", "compiler", "build_type"
     package_type = "header-library"

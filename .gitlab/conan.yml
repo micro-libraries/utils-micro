@@ -1,0 +1,54 @@
+variables:
+  CONAN_USERNAME: micro-libraries
+  CONAN_CHANNEL: default
+
+.code-block-conan-init:
+- git remote set-url origin https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+- conan config install conan/config
+- conan export conan/base-cmake-library/conanfile.py
+- NAME=$(conan inspect ${CONANFILE} --format json | jq -r '.name')
+- VERSION=$(conan inspect ${CONANFILE} --format json | jq -r '.version')
+- conan remove "${NAME}/${VERSION}@${CONAN_USERNAME}/${CONAN_CHANNEL}" -c || true
+
+.code-block-conan-upload:
+- |
+  if ([ "${CI_COMMIT_BRANCH}" = "${CI_DEFAULT_BRANCH}" ] || [ "${CI_COMMIT_BRANCH}" = "develop" ]) && ! grep -qF "[Unreleased]" CHANGELOG.md; then
+    conan remote login ${CONAN_REMOTE} ci_user -p ${MICRO_LIBRARIES_CONAN_TOKEN}
+    conan upload "${NAME}/${VERSION}@${CONAN_USERNAME}/${CONAN_CHANNEL}" -r ${CONAN_REMOTE} --force
+  fi
+
+.conan-needs:
+  needs:
+  - build-image
+  - job: check-release-tag
+    optional: true
+  - job: check-version-in-changelog
+    optional: true
+
+.conan-channel:
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    variables:
+      CONAN_CHANNEL: stable
+  - if: $CI_COMMIT_BRANCH == "develop"
+    variables:
+      CONAN_CHANNEL: nightly
+  - when: on_success
+
+.conan-dev:
+  extends: [.conan-channel, .conan-needs]
+  variables:
+    CONANFILE: conan/conanfile-dev.py
+  script:
+  - !reference [.code-block-conan-init]
+  - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS_DEV}
+  - !reference [.code-block-conan-upload]
+
+.conan-lib:
+  extends: [.conan-channel, .conan-needs]
+  variables:
+    CONANFILE: conan/conanfile.py
+  script:
+  - !reference [.code-block-conan-init]
+  - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
+  - !reference [.code-block-conan-upload]

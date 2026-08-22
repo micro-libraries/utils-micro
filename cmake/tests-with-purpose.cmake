@@ -1,0 +1,6 @@
+function(add_unit_test TEST_NAME)
+    cmake_parse_arguments(TEST_ARG "" "TESTED_LIBRARY" "" ${ARGN})
+    add_executable("${TEST_NAME}" "${TEST_NAME}.cpp")
+    target_link_libraries("${TEST_NAME}" PRIVATE "${TEST_ARG_TESTED_LIBRARY}" Catch2::Catch2WithMain)
+    catch_discover_tests("${TEST_NAME}" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endfunction()
