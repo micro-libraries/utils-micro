@@ -230,7 +230,7 @@ public:
 
     ~NestedMatrix() {
         for (CoordinateT r = 0; r != this->getHeight(); ++r) {
-            std::destroy_n(this->data[r], this->getWidth());
+            std::destroy_n(this->data[r], static_cast<std::size_t>(this->getWidth()));
         }
         this->deallocate();
     }

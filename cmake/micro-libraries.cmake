@@ -25,7 +25,7 @@ endfunction()
 function(add_binary_wrapper_micro_library TARGET_NAME)
     cmake_parse_arguments(LIB_ARG "" "CONFIGURATION;HEADER" "SOURCES;DEPENDENCIES" ${ARGN})
 
-    set(CONFIGURATION_FILENAME "${TARGET_NAME}.config.${LIB_ARG_CONFIGURATION}.h")
+    set(CONFIGURATION_FILENAME "${TARGET_NAME}.${LIB_ARG_CONFIGURATION}.config.h")
 
     add_library("${TARGET_NAME}")
     target_sources("${TARGET_NAME}" PRIVATE ${LIB_ARG_SOURCES})
@@ -34,7 +34,7 @@ function(add_binary_wrapper_micro_library TARGET_NAME)
             BASE_DIRS "${CMAKE_SOURCE_DIR}/include"
             FILES ${LIB_ARG_HEADER}
     )
-    target_compile_definitions("${TARGET_NAME}" PRIVATE CONFIGURATION "${CONFIGURATION_FILENAME}")
+    target_compile_definitions("${TARGET_NAME}" PRIVATE "CONFIGURATION=\"${CONFIGURATION_FILENAME}\"")
     target_include_directories("${TARGET_NAME}" PUBLIC
             $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:include>
@@ -51,7 +51,7 @@ endfunction()
 function(add_micro_library TARGET_NAME)
     cmake_parse_arguments(LIB_ARG "" "CONFIGURATION;INCLUDE_DIR" "SOURCES;PUBLIC_HEADERS;DEPENDENCIES" ${ARGN})
 
-    set(CONFIGURATION_FILENAME "${TARGET_NAME}.config.${LIB_ARG_CONFIGURATION}.h")
+    set(CONFIGURATION_FILENAME "${TARGET_NAME}.${LIB_ARG_CONFIGURATION}.config.h")
 
     add_library("${TARGET_NAME}")
     target_sources("${TARGET_NAME}" PRIVATE ${LIB_ARG_SOURCES})
@@ -60,7 +60,7 @@ function(add_micro_library TARGET_NAME)
             BASE_DIRS "${LIB_ARG_INCLUDE_DIR}"
             FILES ${LIB_ARG_PUBLIC_HEADERS}
     )
-    target_compile_definitions("${TARGET_NAME}" PRIVATE CONFIGURATION "${CONFIGURATION_FILENAME}")
+    target_compile_definitions("${TARGET_NAME}" PRIVATE "CONFIGURATION=\"${CONFIGURATION_FILENAME}\"")
     target_include_directories("${TARGET_NAME}" PUBLIC
             $<BUILD_INTERFACE:${LIB_ARG_INCLUDE_DIR}>
             $<INSTALL_INTERFACE:include>

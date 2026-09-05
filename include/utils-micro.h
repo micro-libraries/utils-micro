@@ -1,6 +1,5 @@
 #ifndef UTILS_MICRO_H
 #define UTILS_MICRO_H
-#include "utils-micro-config.h"
 
 extern "C" {
 

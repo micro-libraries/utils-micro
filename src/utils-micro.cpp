@@ -1,4 +1,4 @@
-#include "utils-micro-config.h"
+#include CONFIGURATION
 #include <utils-micro.h>
 #include <utils-micro/matrix.hpp>
 #include <utils-micro/fourier.hpp>
