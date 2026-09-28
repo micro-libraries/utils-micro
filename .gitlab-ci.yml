@@ -42,7 +42,9 @@ conan:dev:
   extends: .conan-dev
 
 conan:lib:
-  extends: .conan-lib
+  extends: .conan-lib-with-dev
+  needs:
+  - conan:dev
 
 add-release-tag:
   extends: .add-release-tag

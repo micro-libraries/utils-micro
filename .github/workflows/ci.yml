@@ -121,8 +121,9 @@ jobs:
       - run: conan remove "$PKG_NAME/$PKG_VERSION@${{ env.CONAN_USERNAME }}/${{ env.CONAN_CHANNEL }}" -c || true
       - run: conan create conan/conanfile-dev.py -b missing --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS_DEV }}
 
-  conan-lib:
-    needs: [compute-tag, build-image, check-version-in-changelog]
+  # For a lib package whose recipe requires a sibling dev package.
+  conan-lib-with-dev:
+    needs: [compute-tag, conan-dev]
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}/ubuntu:${{ needs.compute-tag.outputs.tag }}
@@ -142,4 +143,5 @@ jobs:
           echo "PKG_NAME=$(conan inspect conan/conanfile.py --format json | jq -r '.name')" >> $GITHUB_ENV
           echo "PKG_VERSION=$(conan inspect conan/conanfile.py --format json | jq -r '.version')" >> $GITHUB_ENV
       - run: conan remove "$PKG_NAME/$PKG_VERSION@${{ env.CONAN_USERNAME }}/${{ env.CONAN_CHANNEL }}" -c || true
+      - run: conan create conan/conanfile-dev.py -b missing --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS_DEV }}
       - run: conan create conan/conanfile.py -b missing --user=${{ env.CONAN_USERNAME }} --channel=${{ env.CONAN_CHANNEL }} ${{ env.CONAN_EXTRA_OPTIONS }}

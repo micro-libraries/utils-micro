@@ -52,3 +52,13 @@ variables:
   - !reference [.code-block-conan-init]
   - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
   - !reference [.code-block-conan-upload]
+
+# Like .conan-lib, but for a lib package whose recipe requires a sibling dev package.
+# TODO: Consider transferring a shared cache as a job artifact instead (conan cache save/restore).
+.conan-lib-with-dev:
+  extends: .conan-lib
+  script:
+  - !reference [.code-block-conan-init]
+  - conan create conan/conanfile-dev.py -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS_DEV}
+  - conan create ${CONANFILE} -b missing --user=${CONAN_USERNAME} --channel=${CONAN_CHANNEL} ${CONAN_EXTRA_OPTIONS}
+  - !reference [.code-block-conan-upload]
