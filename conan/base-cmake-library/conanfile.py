@@ -37,8 +37,8 @@ class BaseCmakeLibrary:
         cmake_layout(self)
 
     def export(self) -> None:
-        git = Git(self, self.recipe_folder)
-        scm_url, scm_commit = git.get_url_and_commit()
+        git = Git(self)
+        scm_url, scm_commit = git.get_url_and_commit(repository=True)
         update_conandata(self, {"scm": {"commit": scm_commit, "url": scm_url}})
 
     def source(self) -> None:

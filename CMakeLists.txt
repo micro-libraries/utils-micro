@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(utils-micro VERSION 0.4.3 LANGUAGES C CXX)
+project(utils-micro VERSION 0.4.4 LANGUAGES C CXX)
 
 include("cmake/micro-libraries.cmake")
 
