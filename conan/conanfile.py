@@ -34,7 +34,8 @@ class ConanPackage(ConanFile):
         self.test_requires("catch2/3.7.0")
 
     def requirements(self):
-        self.requires(f"utils-micro-dev/{self.version}")
+        user_channel = f"@{self.user}/{self.channel}" if self.user else ""
+        self.requires(f"utils-micro-dev/{self.version}{user_channel}")
         # if self.options.python_bindings:
         #     self.requires("pybind11/2.13.6")
 
