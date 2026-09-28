@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
-project(utils-micro VERSION 0.4.2 LANGUAGES C CXX)
+project(utils-micro VERSION 0.4.3 LANGUAGES C CXX)
 
 include("cmake/micro-libraries.cmake")
 
@@ -7,6 +7,8 @@ include("cmake/micro-libraries.cmake")
 add_header_only_micro_library("${PROJECT_NAME}-dev" SOURCE_DIR "${CMAKE_SOURCE_DIR}/include/dev")
 
 add_subdirectory(src)
+
+enable_testing()
 
 add_subdirectory(test)
 

@@ -1,5 +1,3 @@
-enable_testing()
-
 find_package(Threads REQUIRED)
 find_package(Catch2 3 REQUIRED)
 find_package(OpenMP)
